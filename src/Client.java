@@ -1,8 +1,6 @@
 
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -10,8 +8,12 @@ public class Client  {
 
     private Socket socket;
 
-    private DataOutputStream dout;
-    private DataInputStream din;
+    private User user;
+
+
+
+    private ObjectOutputStream dout;
+    private ObjectInputStream din;
     public Client(String host, int port) {
 
         try {
@@ -21,8 +23,8 @@ public class Client  {
             System.out.println("connected to " + socket);
             // Let's grab the streams and create DataInput/Output streams
             // from them
-            din = new DataInputStream(socket.getInputStream());
-            dout = new DataOutputStream(socket.getOutputStream());
+            din = new ObjectInputStream(socket.getInputStream());
+            dout = new ObjectOutputStream(socket.getOutputStream());
             // Start a background thread for receiving messages
 
             new ClientInPutThread(this);
@@ -32,19 +34,19 @@ public class Client  {
         }
     }
 
-    public DataInputStream getDin(){
+    public ObjectInputStream getDin(){
         return din;
     }
 
-    public DataOutputStream getDout(){
+    public ObjectOutputStream getDout(){
         return dout;
     }
 
     // Gets called when the user types something
-    public void processMessage(String message) {
+    public void processMessage(Message message) {
         try {
             // Send it to the server
-            dout.writeUTF(message);
+            dout.writeObject(message);
             // Clear out text input field
 
         } catch (IOException ie) {
@@ -53,10 +55,17 @@ public class Client  {
     }
 
 
-
-    public static void main(String agrs[]){
-         new Client("39.108.158.170",5209);
+    public void setUser(User user){
+        this.user = user;
     }
+
+    public User getUser(){
+        return user;
+    }
+
+
+
+
 
     //
     /**
@@ -80,7 +89,13 @@ public class Client  {
             try {
                 // Receive messages one-by-one, forever
                 while (true) {
-                    String  message = input.nextLine();
+
+                    String content = input.nextLine();
+
+
+                    Message message = new Message(content);
+                    message.setUser(user);
+
                     client.processMessage(message);
                 }
             } catch (Exception ie) {
@@ -99,6 +114,8 @@ public class Client  {
      */
     public class ClientOutPutThread extends Thread {
         private Client client;
+
+
         private Scanner input = new Scanner(System.in);
         public ClientOutPutThread(Client client){
             this.client = client;
@@ -113,15 +130,33 @@ public class Client  {
                 // Receive messages one-by-one, forever
                 while (true) {
                     // Get the next message
-                    String message = client.getDin().readUTF();
+                    Message message = (Message) client.getDin().readObject();
+
+                    if(message.getMessageType()==MessageType.REQUESTMESSAGE){
+                        user = message.getUser();
+
+                    }
 
                     // Print it to our text window
                     System.out.println(message);
                 }
-            } catch (IOException ie) {
+            }catch (ClassNotFoundException ie){
+                System.out.println(ie);
+            }
+
+            catch (IOException ie) {
                 System.out.println(ie);
             }
         }
+
+    }
+
+
+
+    public static void main(String agrs[]){
+        //new Client("39.108.158.170",5209);
+        //User   scf = new User(new Scanner(System.in).nextLine());
+        new Client("127.0.0.1",59531);
 
     }
 }

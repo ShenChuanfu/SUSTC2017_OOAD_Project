@@ -1,6 +1,7 @@
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Enumeration;
@@ -33,7 +34,7 @@ public class Server {
             System.out.println("Connection from " + s);
             // Create a DataOutputStream for writing data to the
             // other side
-            DataOutputStream dout = new DataOutputStream(s.getOutputStream());
+            ObjectOutputStream dout = new ObjectOutputStream(s.getOutputStream());
             // Save this stream so we don't need to make it again
             outputStreams.put(s, dout);
             // Create a new thread for this connection, and then forget
@@ -49,7 +50,7 @@ public class Server {
     }
 
     // Send a message to all clients (utility routine)
-    void sendToAll(String message) {
+    void sendToAll(Message message) {
         // We synchronize on this because another thread might be
         // calling removeConnection() and this would screw us up
         // as we tried to walk through the list
@@ -57,16 +58,41 @@ public class Server {
             // For each client ...
             for (Enumeration e = getOutputStreams(); e.hasMoreElements();) {
                 // ... get the output stream ...
-                DataOutputStream dout = (DataOutputStream) e.nextElement();
+                ObjectOutputStream dout = (ObjectOutputStream) e.nextElement();
                 // ... and send the message
                 try {
-                    dout.writeUTF(message);
+
+                    dout.writeObject(message);
+                    dout.flush();
+
 
                 } catch (IOException ie) {
                     System.out.println(ie);
                 }
             }
         }
+    }
+
+    void sendtoS(Socket socket,Message message){
+        synchronized (outputStreams) {
+            // For each client ...
+            //for (Enumeration e = getOutputStreams(); e.hasMoreElements();) {
+                // ... get the output stream ...
+                ObjectOutputStream dout = (ObjectOutputStream) outputStreams.get(socket);
+                // ... and send the message
+
+                try {
+
+                    dout.writeObject(message);
+                    dout.flush();
+
+
+                } catch (IOException ie) {
+                    System.out.println(ie);
+                }
+            }
+       // }
+
     }
 
     // Remove a socket, and it's corresponding output stream, from our
@@ -97,6 +123,6 @@ public class Server {
         //int port = Integer.parseInt(args[0]);
         // Create a Server object, which will automatically begin
         // accepting connections.
-        new Server(5290);
+        new Server(59531);
     }
 }

@@ -1,7 +1,5 @@
 
-import java.io.DataInputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 
 public class ServerThread extends Thread {
@@ -9,6 +7,7 @@ public class ServerThread extends Thread {
     private Server server;
     // The Socket connected to our client
     private Socket socket;
+
 
     // Constructor.
     public ServerThread(Server server, Socket socket) {
@@ -25,17 +24,29 @@ public class ServerThread extends Thread {
         try {
             // Create a DataInputStream for communication; the client
             // is using a DataOutputStream to write to us
-            DataInputStream din = new DataInputStream(socket.getInputStream());
+            ObjectInputStream din = new ObjectInputStream(socket.getInputStream());
             // Over and over, forever ...
             while (true) {
+
+
+                Message message = (Message) din.readObject();
                 // ... read the next message ...
-                String message = din.readUTF();
+                //String message = din.readUTF();
+
+                if(message.getUser()==null){
+                    message.setUser(setUserifNotUser());
+                }
+
                 // ... tell the world ...
-                System.out.println("Sending " + message);
+                System.out.println(message);
                 // ... and have the server send it to all clients
                 server.sendToAll(message);
             }
-        } catch (EOFException ie) {
+        }catch (ClassNotFoundException ie){
+
+
+        }
+        catch (EOFException ie) {
             // This doesn't need an error message
         } catch (IOException ie) {
             // This does; tell the world!
@@ -45,5 +56,19 @@ public class ServerThread extends Thread {
             // so have the server dealing with it
             server.removeConnection(socket);
         }
+    }
+
+    public User setUserifNotUser(){
+        User user  = new User();
+        Message userMessage = new Message("");
+        userMessage.setUser(user);
+        userMessage.setMessageType(MessageType.REQUESTMESSAGE);
+        try {
+            server.sendtoS(socket,userMessage);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return user;
     }
 }
